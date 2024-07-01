@@ -52,7 +52,7 @@ Item {
             editedTables.forEach(function(table) { tables += ` -> ${tableToString(table)}\n`; })
             console.info(tables)
         }
-        property var invalidatedTimerReset
+        property Timer invalidatedTimer
 
         function tableToString(table) { return table.tableName + "[" + table.tableScope + "]" }
         function editInvalidated(table, id) {
@@ -63,10 +63,11 @@ Item {
                 // TODO: The proper thing to do here is notify the user and ask them before taking action...
                 // but so we can test the underlying tech first:
                 // Delay before resetting to let the tables settle completely
-                if (invalidatedTimerReset)
+                if (invalidatedTimer)
                     // If timer is already running, just restart it
-                    invalidatedTimerReset()
-                invalidatedTimerReset = Utils.setTimeout(200, actionsChanged)
+                    invalidatedTimer.restart()
+                else
+                    invalidatedTimer = Utils.setTimeout(200, actionsChanged)
             }
         }
         function tableSettled(table) {

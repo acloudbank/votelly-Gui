@@ -10,9 +10,7 @@
 #include <KeyManager.hpp>
 #include <Action.hpp>
 #include <Enums.hpp>
-#include <TlsPskSession.hpp>
 
-#include <QObject>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -27,6 +25,7 @@ int main(int argc, char *argv[]) {
     // Install the Assistant as the log message handler
     qInstallMessageHandler(&Assistant::messageHandler);
 
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     // On Windows, use an ini file for persistence rather than the registry
     if (QSet<QString>{QStringLiteral("winrt"), QStringLiteral("windows")}.contains(QSysInfo::productType()))
         QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -49,7 +48,6 @@ int main(int argc, char *argv[]) {
                                      QStringLiteral("Tasks can only be created by the Assistant"));
     qmlRegisterType<BlockchainInterface>(POLLARIS_1_0, "BlockchainInterface");
     qmlRegisterType<KeyManager>(POLLARIS_1_0, "KeyManager");
-    qmlRegisterType<TlsPskSession>(POLLARIS_1_0, "TlsPskSession");
     qmlRegisterUncreatableType<AbstractTableInterface>(POLLARIS_1_0, "TableInterface",
                                       QStringLiteral("This is an abstract interface which cannot be instantiated"));
     qmlRegisterUncreatableType<QAbstractListModel>(POLLARIS_1_0, "TableModel",
@@ -73,13 +71,6 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty(componentMgrName, componentManager);
     engine.rootContext()->setContextProperty(uxMgrName, uxManager);
     engine.rootContext()->setContextProperty("context", &contextMap);
-
-    // To enable quitting on Qt Kit 6.x and to avoid the warning,
-    // "Signal QQmlEngine::quit() emitted, but no receivers connected to handle it."
-    // connect the QML Engine's quit to the Application's quit
-    // per https://stackoverflow.com/questions/51810358/how-to-quit-the-c-application-in-qt-qml .
-    // See signal-slot syntax at https://wiki.qt.io/New_Signal_Slot_Syntax
-    QObject::connect(&engine, &QQmlApplicationEngine::quit, &QGuiApplication::quit);
 
     uxManager->begin();
 

@@ -49,6 +49,8 @@ class AbstractTableInterface : public QObject {
     Q_OBJECT
     ADD_DNMX
 
+    //! \property blockchain Pointer to the blockchain used by this table
+    Q_PROPERTY(BlockchainInterface* blockchain READ getBlockchain WRITE setBlockchain NOTIFY blockchainChanged)
     //! \property tableName The name of the record type the table stores
     Q_PROPERTY(QString tableName READ tableName CONSTANT)
     //! \property tableScope The scope of the table

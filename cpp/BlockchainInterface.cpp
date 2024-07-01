@@ -96,7 +96,7 @@ QNetworkReply* BlockchainInterface::getBlock(unsigned long number) {
 
 // Getters
 BlockchainInterface::SyncStatus BlockchainInterface::syncStatus() const { return data->syncStatus; }
-QString BlockchainInterface::nodeUrl() const { return data->nodeUrl.toString(); }
+QUrl BlockchainInterface::nodeUrl() const { return data->nodeUrl; }
 QByteArray BlockchainInterface::headBlockId() const { return data->headBlockId; }
 unsigned long BlockchainInterface::headBlockNumber() const { return data->headBlockNumber; }
 unsigned long BlockchainInterface::irreversibleBlockNumber() const { return data->irreversibleBlockNumber; }
@@ -107,12 +107,10 @@ QByteArray BlockchainInterface::chainId() const { return data->chainId; }
 quint64 BlockchainInterface::serverLatency() const { return data->serverLatency; }
 
 // Setters
-void BlockchainInterface::setNodeUrl(QString nodeUrl) {
-    auto url = QUrl::fromUserInput(nodeUrl);
-    if (data->nodeUrl == url)
+void BlockchainInterface::setNodeUrl(QUrl nodeUrl) {
+    if (data->nodeUrl == nodeUrl)
         return;
-    data->nodeUrl = url;
-    emit nodeUrlChanged(data->nodeUrl.toString());
+    emit nodeUrlChanged(data->nodeUrl = nodeUrl);
 }
 void BlockchainInterface::setSyncInterval(uint32_t syncRate) {
     if (data->syncInterval == syncRate)

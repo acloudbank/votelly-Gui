@@ -171,7 +171,7 @@ public:
     std::optional<std::tuple<Row, LoadState>> get(RowId<Row> id) const {
         auto backupItr = std::lower_bound(rows.begin(), rows.end(), id, CompareId<Row>());
         if (backupItr != rows.end() && backupItr->getId() == id)
-            return std::make_tuple(*backupItr, states[backupItr-rows.begin()]);
+            return std::make_tuple(*backupItr, states[backupItr=rows.begin()]);
         return {};
     }
     bool remove(RowId<Row> id, Row* rowValue = nullptr, LoadState* rowState = nullptr) {

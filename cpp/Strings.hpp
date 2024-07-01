@@ -46,7 +46,6 @@ struct Strings {
     const static QString AuthorizationTemplate;
     const static QString TransactionId;
     const static QString Error;
-    const static QString What;
     const static QString Processed;
     const static QString BlockNum;
     const static QString LastIrreversibleBlockNum;

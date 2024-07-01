@@ -11,8 +11,8 @@
  * \brief A CRTP-style template defining the interface of a virtual field
  *
  * Virtual fields are fields used for GUI concerns, but not stored in the backend database. A virtual field is
- * implemented using a class which manages the calculation of the field value, connects to signals to detect changes
- * affecting the virtual field, and automatically updates it as those changes affect its value.
+ * implemented using a class which manages the calculation of the field value and connecting to signals to detect
+ * changes affecting the virtual field and automatically update it.
  *
  * This is a compile-time interface using the CRTP design pattern. It is applied to an implementation like so:
  * class MyVirtualField : public VirtualFieldInterface<MyVirtualField> { ... };
@@ -58,12 +58,12 @@ public:
     // ChangedSignal is a callable with no arguments or return value. When called, it emits the field's changed signal
     template<typename ChangedSignal>
     void rowChanged(const RowType& row, LoadState rowState, ChangedSignal&& signal) {
-        static_cast<ConcreteField*>(this)->rowChanged(row, rowState, std::forward<ChangedSignal>(signal));
+        static_cast<ConcreteField*>(this)->rowChangedImpl(row, rowState, std::forward<ChangedSignal>(signal));
     }
 
     // Get the current value and load status of the virtual field, in the context of the provided row
     QPair<Type, LoadState> get(const RowType& row, LoadState rowState) {
-        return static_cast<ConcreteField*>(this)->get(row, rowState);
+        return static_cast<ConcreteField*>(this)->getImpl(row, rowState);
     }
 };
 
@@ -87,6 +87,7 @@ struct TableName {
  * \brief A template for a table in the database
  *
  * \tparam Row Struct containing the literal rows of the backend database
+ * \tparam TableName QString containing the name of the table in the backend
  *
  * The Pollaris GUI keeps caches of the data in the backend database tables in order to support the GUI operations.
  * This class template describes a type which manages one of the tables (an instance of the class is responsible for
@@ -96,9 +97,9 @@ struct TableName {
  * access the data in a QML-friendly fashion with update signals etc, a second layer is used which is a subclass of
  * QAbstractListModel. This second layer is called the table 'model.' A GUI can request a model containing the rows
  * of the table it wishes to display, and that model will be kept up to date with change notification signals.
- * Multiple models can be taken from the table displaying different ranges of rows of the table. These may overlap.
+ * Multiple models can be taken from the table displaying different ranges of rows of the table.
  *
- * Virtual fields can only be viewed through a model; the table itself does not calculate nor store them.
+ * Virtual fields can only be viewed through a model; the table itself does not calculate or store them.
  */
 template<class Row>
 class AbstractTable : public AbstractTableInterface {
@@ -234,7 +235,6 @@ template<class Row> AbstractTable<Row>::Model::Model(AbstractTable* table, Block
         qCritical("AbstractTableModel created with nullptr to blockchain!");
 
     // For now, just take all rows as relevant
-    // TODO: Make models do subset ranges, like the docs say they do
     for (int i = 0; i < table->rowList.length(); ++i) {
         const Row& r = table->rowList[i];
         modelIds.append(r.getId());
@@ -255,7 +255,7 @@ template<class Row> void AbstractTable<Row>::Model::updateVirtualRoles(const Row
         constexpr auto role = VIRTUAL_ROLE_BASE + fieldNumber;
         auto pos = std::lower_bound(modelIds.begin(), modelIds.end(), row.getId(), CompareId<Row>());
         auto index = createIndex(pos-modelIds.begin(), 0);
-        auto emitDataChanged = [this, index=std::move(index), role] { emit dataChanged(index, index, {role}); };
+        auto emitDataChanged = [this, index, role] { emit dataChanged(index, index, {role}); };
         std::get<fieldNumber>(virtualFields).rowChanged(row, rowState, emitDataChanged);
     });
 }

@@ -69,13 +69,10 @@ Window {
         anchors {
             left: rootItem.left
             right: rootItem.right
+            bottom: rootItem.bottom
             margins: 20
-
-            // Overlap with the bottom 1/5 of the seat
-            top: seat.top
-            topMargin: seat.height * 4 / 5
         }
-        // The implicit height will dynamically adjust based on the textual content
+        height: width * .25
         z: seat.z + 1
         opacity: 0
         focus: true

@@ -34,7 +34,6 @@ const QString Strings::Active = QStringLiteral("active");
 const QString Strings::AuthorizationTemplate = QStringLiteral("%1@%2");
 const QString Strings::TransactionId = QStringLiteral("transaction_id");
 const QString Strings::Error = QStringLiteral("error");
-const QString Strings::What = QStringLiteral("what");
 const QString Strings::Processed = QStringLiteral("processed");
 const QString Strings::BlockNum = QStringLiteral("block_num");
 const QString Strings::LastIrreversibleBlockNum = QStringLiteral("last_irreversible_block_num");

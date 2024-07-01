@@ -12,13 +12,13 @@ Assistant {
     id: assistant
     objectName: "appManager"
 
-    required property ComponentManager componentManager
-    required property UXManager uxManager
+    // Required keyword dropped pending resolution of QTCREATORBUG-24144
+    /*required*/ property ComponentManager componentManager
+    /*required*/ property UXManager uxManager
 
     property AssistantLogo assistantLogo
     property AssistantDialogArea dialogArea
     property BlockchainInterface blockchain
-    property Window dialogWindow
 
     Component.onCompleted: {
         Utils.initialize(componentManager)
@@ -31,16 +31,6 @@ Assistant {
         Qt.application.aboutToQuit.connect(() => visor.destroy())
     }
 
-    function launchApp(preloadedUi) {
-        dialogWindow.hide()
-        dialogWindow.destroy()
-        preloadedUi.show()
-
-        // Go ahead and preload the transaction manager UI for later
-        componentManager.createFromFile("qrc:/qml/TransactionManagerUI.qml",
-                                        (trxMgr) => context.transactionManager = trxMgr, assistant, {})
-    }
-
     property Window visor: Window {
         flags: Qt.WindowFullScreen |Qt.FramelessWindowHint |Qt.WindowTransparentForInput |Qt.BypassWindowManagerHint
         x: 0; y: 0
@@ -51,22 +41,8 @@ Assistant {
 
     property Settings settings: Settings {
         id: assistantSettings
-        // category: "Assistant"
-        category: "Distractor"
+        category: "Assistant"
 
         property url blockchainNodeUrl
-        property string inviteCode
-        property string voterPublicKey
-        property string deploymentKey
-        property string deploymentLocation
-        property string voterName
-    }
-
-    property KeyManager keyManager: KeyManager {
-
-    }
-
-    property TlsPskSession tlsSession: TlsPskSession {
-        keyManager: assistant.keyManager
     }
 }

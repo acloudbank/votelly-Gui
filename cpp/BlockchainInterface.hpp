@@ -18,7 +18,7 @@ class BlockchainInterface : public QObject {
     BlockchainInterface_Private* data;
 
     // Configuration properties (writeable)
-    Q_PROPERTY(QString nodeUrl READ nodeUrl WRITE setNodeUrl NOTIFY nodeUrlChanged)
+    Q_PROPERTY(QUrl nodeUrl READ nodeUrl WRITE setNodeUrl NOTIFY nodeUrlChanged)
     Q_PROPERTY(quint32 syncInterval READ syncInterval WRITE setSyncInterval NOTIFY syncIntervalChanged)
     Q_PROPERTY(quint32 syncStaleSeconds READ syncStaleSeconds WRITE setSyncStaleSeconds
                NOTIFY syncStaleSecondsChanged)
@@ -70,7 +70,7 @@ public:
 
     SyncStatus syncStatus() const;
     QString syncStatusString() const { return QMetaEnum::fromType<SyncStatus>().valueToKey(int(syncStatus())); }
-    QString nodeUrl() const;
+    QUrl nodeUrl() const;
     QByteArray headBlockId() const;
     unsigned long headBlockNumber() const;
     unsigned long irreversibleBlockNumber() const;
@@ -81,7 +81,7 @@ public:
     quint64 serverLatency() const;
 
 public slots:
-    void setNodeUrl(QString nodeUrl);
+    void setNodeUrl(QUrl nodeUrl);
     void setSyncInterval(uint32_t syncRate);
     void setSyncStaleSeconds(uint32_t syncStaleSeconds);
 
@@ -93,7 +93,7 @@ public slots:
 signals:
     // Property change signals
     void syncStatusChanged(SyncStatus syncStatus);
-    void nodeUrlChanged(QString nodeUrl);
+    void nodeUrlChanged(QUrl nodeUrl);
     void chainIdChanged(QByteArray chainId);
     void headBlockChanged();
     void syncIntervalChanged(uint32_t syncInterval);

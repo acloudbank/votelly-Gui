@@ -25,20 +25,10 @@ void BroadcastableTransaction::broadcastFinished(QByteArray response) {
     auto responseObject = QJsonDocument::fromJson(response).object();
 
     if (responseObject.contains(Strings::Error)) {
-        qWarning() << "Transaction failed:" << responseObject;
-
         emit statusChanged(m_status = TransactionStatus::Failed);
-
-        QString errorMessage;
-        if (responseObject.contains(Strings::Error)
-                && responseObject[Strings::Error].toObject().contains(Strings::What)) {
-            errorMessage = responseObject[Strings::Error].toObject()[Strings::What].toString();
-        }
-        emit broadcastFailed(errorMessage);
-
+        qWarning() << "Transaction failed:" << responseObject;
         return;
     }
-
     if (responseObject.contains(Strings::TransactionId) && responseObject[Strings::TransactionId].toString() != m_id)
         qWarning() << "Broadcast transaction reply has unexpected ID"
                    << responseObject[Strings::TransactionId] << "vs" << m_id;
@@ -49,7 +39,6 @@ void BroadcastableTransaction::broadcastFinished(QByteArray response) {
         qInfo() << "Transaction" << m_id << "confirmed in block" << trxBlock;
         emit statusChanged(m_status = TransactionStatus::Confirmed);
         emit blockNumberChanged(m_blockNumber = trxBlock);
-        emit broadcastConfirmed(trxBlock, m_id);
     }
 
     if (blockchain != nullptr)
@@ -90,7 +79,6 @@ void BroadcastableTransaction::headBlockChanged() {
                             auto id = trxObject[Strings::Id].toString();
                             if (id == m_id) {
                                 emit statusChanged(m_status = TransactionStatus::Irreversible);
-                                emit broadcastIrreversible();
                                 return;
                             }
                             qWarning() << "BroadcastableTransaction: Transaction not found in irreversible block";
