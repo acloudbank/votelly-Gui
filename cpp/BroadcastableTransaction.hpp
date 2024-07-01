@@ -41,6 +41,26 @@ signals:
     void statusChanged(TransactionStatus status);
     void blockNumberChanged(uint64_t blockNumber);
 
+    /**
+     * @brief Notification that the broadcast was confirmed on the blockchain.
+     *      Although confirmed, the transaction could be reversed depending on potential
+     *      forking of the blockchain.  The transaction will finally be finalized
+     *      upon notification of its irreversible status.
+     * @see broadcastIrreversible()
+     */
+    void broadcastConfirmed(const qulonglong& blockNumber, const QString& transactionId);
+
+    /**
+     * @brief Notification that the broadcast was confirmed and irreversible on the blockchain
+     */
+    void broadcastIrreversible();
+
+    /**
+     * @brief Notification that the broadcast failed
+     * @param failureReason Description of the failure reason
+     */
+    void broadcastFailed(const QString& failureReason);
+
 private slots:
     void headBlockChanged();
 };

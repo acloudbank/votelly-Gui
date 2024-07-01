@@ -6,13 +6,13 @@ var firstTimeStartup = false
 // prev: Function to call when previous dialog button is pressed
 // input: An item to set to visible once the dialog finishes typing. This item must already be prepared
 var dialog = {
-    "blockchainLoadFailed": {
+    "startupFailed": {
         "text": qsTr("Oh no... An internal failure has occurred, and I am unable to start. Please contact support.")
     },
     "introduction": {
         "text": qsTr(`Hello! I'm ${strings.AssistantName} (ah-SEE), the Follow My Vote Assistant. I'm here to ` +
                      `show you how to use the app and to help with any questions or problems along the way.`),
-        "next": () => displayDialog("getUrl")
+        "next": () => displayDialog("inviteCodeGet")
     },
     "getUrl": {
         "text": qsTr(`We're almost ready to open the app, but first I need to connect to the blockchain server, ` +
@@ -44,6 +44,72 @@ var dialog = {
         "prev": () => displayDialog("introduction"),
         "input": null // Input is set by blockchainNodeTimeout()
     },
+    "inviteCodeGet": {
+        "text": qsTr(`We're almost ready to open the app, but first I need to validate your invitation. ` +
+                     `Please enter your invite code below:`),
+        "next": tryInviteCode,
+        "prev": () => displayDialog("introduction"),
+        "input": null // Set in beginDialog()
+    },
+    "inviteCodeMalformed": {
+        "text": qsTr(`Hmm... That invite code doesn't seem valid. A valid one would look something like<br/>` +
+                     `<u>ABC-1234567890</u>. Please enter the invite code below:`),
+        "input": null, // Set in tryInviteCode()
+        "next": tryInviteCode,
+        "prev": () => displayDialog("introduction")
+    },
+    "dispatchServerTrying": {
+        "text": qsTr("One moment while I contact the dispatch server ...")
+    },
+    "dispatchServerConnectionFailure": {
+        "text": qsTr("Uh-oh... I can't connect to the dispatch server. Is our internet connection working? " +
+                     "I'll keep trying, and I'll let you know if it comes back online.")
+    },
+    "dispatchServerTimeout": {
+        "text": qsTr("Well, this is taking forever... The dispatch server hasn't sent a response yet. If it ever does, " +
+                                     "I'll let you know."),
+        "prev": () => displayDialog("introduction"),
+    },
+    "dispatchServerReportsUnresponsiveDeploymentServer": {
+        "text": qsTr("Well, this is awkward... The dispatch server isn't getting a response from the deployment server. " +
+                                     "You might want to try again later."),
+        "prev": () => displayDialog("introduction"),
+    },
+    "dispatchServerUnrecognizedInviteCode": {
+        "text": qsTr("Hmmm... That invite code is not recognized by the dispatch server.  " +
+                     `Please check the invite code and try again.`),
+        "next": tryInviteCode,
+        "prev": null,
+        "input": null // Set in beginDialog()
+    },
+    "deploymentServerTrying": {
+        "text": qsTr("... the dispatch server recognizes the invite code.<br/> " +
+                     "One moment while I contact the deployment server ...")
+    },
+    "deploymentServerConnectionFailure": {
+        "text": qsTr("Uh-oh... I can't connect to the deployment server. Is our internet connection working? " +
+                     "I'll keep trying, and I'll let you know if it comes back online.")
+    },
+    "deploymentServerTimeout": {
+        "text": qsTr("Well, this is taking forever... The deployment server hasn't sent a response yet. If it ever does, " +
+                                     "I'll let you know."),
+        "prev": () => displayDialog("introduction"),
+    },
+    "deploymentServerUnrecognizedInviteCode": {
+        "text": qsTr(`Hmm... That invite code is rejected by the deployment server. A valid one would look something like<br/>` +
+                     `<u>ABC-1234567890</u>. Please check the invite code and try again.`),
+        "input": null, // Set in tryInviteCode()
+        "next": tryInviteCode,
+        "prev": null
+    },
+    "deploymentServerInvalidPublicKey": {
+        "text": qsTr(`Hmm... Your public key is rejected by the deployment server. I don't know what to tell you.`),
+        "prev": () => displayDialog("introduction")
+    },
+    "deploymentServerSuccess": {
+        "text": qsTr("... your invite code has been accepted.<br/> " +
+                     "One moment while I contact the blockchain server ...")
+    },
     "goodConnection": {
         "text": qsTr("Alright! I was able to connect to the server and everything seems correct. If you want, you " +
                      "can update the server address in the technical settings later on."),
@@ -70,6 +136,7 @@ var dialog = {
     },
     "ready": {
         "text": qsTr("Everything is prepared. Press anywhere to start Pollaris."),
+        "onReached": prepApp,
         "next": openApp
     },
     "normalStart": {
@@ -112,6 +179,8 @@ function displayDialog(dialogId) {
 
     console.info("Setting dialog to", dialogId)
     currentDialog = dialog[dialogId]
+    if (typeof currentDialog.onReached === "function")
+        currentDialog.onReached()
     dialogArea.write(currentDialog.text, () => {
                          if (dialogArea.text !== currentDialog.text)
                             // We are probably a callback for a canceled animation
@@ -142,6 +211,7 @@ function beginDialog() {
         // Display the initial introduction of the assistant
         displayDialog("introduction")
 
+/*
         // Go ahead and create the server input field; we'll need it in the next dialog segment
         let fieldProperties = {
             "parent": dialogArea.inputArea,
@@ -153,10 +223,34 @@ function beginDialog() {
             dialog.getUrl.input = field
             field.width = Qt.binding(() => dialogArea.inputArea.width)
             field.anchors.verticalCenter = field.parent.verticalCenter
+            // Allow the component to assume its implicit height
+            // and hope that it vertically fits within its container which is the inputArea
         }
 
         componentManager.createFromSource(serverInputFieldSource, "BlockchainServerInputField",
                                           fieldCreated, dialogArea.inputArea, fieldProperties)
+*/
+
+        // Go ahead and create the invite code input field; we'll need it in the next dialog segment
+        let fieldProperties = {
+            "parent": dialogArea.inputArea,
+            "visible": false,
+            "font": dialogArea.font,
+            "placeholderText": qsTr("ABC-1234567890"),
+        }
+
+        let fieldCreated = (field) => {
+            dialog.inviteCodeGet.input = field
+            field.width = Qt.binding(() => dialogArea.inputArea.width)
+            field.anchors.verticalCenter = field.parent.verticalCenter
+            field.onAccepted.connect(progressDialog)
+            // Allow the component to assume its implicit height
+            // and hope that it vertically fits within its container which is the inputArea
+        }
+
+        componentManager.createFromSource(inviteCodeFieldSource, "InviteCodeInputField",
+                                          fieldCreated, dialogArea.inputArea, fieldProperties)
+
     } else {
         console.info("Routine startup, blockchain server is " + assistantSettings.blockchainNodeUrl)
         displayDialog("normalStart")
@@ -177,14 +271,39 @@ function regressDialog() {
     }
 }
 
+var appUi = undefined
+function prepApp() {
+    console.log("Preloading app UI")
+
+    let onLoaded = (ui) => {
+        if (!ui) {
+            console.error("Failed to load UI!")
+            displayDialog("startupFailed")
+        }
+
+        console.log("Finished loading UI")
+        if (!!appUi)
+            launchApp(appUi)
+        else
+            appUi = ui
+    }
+
+    componentManager.createFromFile("qrc:/qml/PollingGroupManagementUI.qml", onLoaded, assistant, {})
+}
+
 function openApp() {
     console.log("Opening the app")
+    if (!!appUi)
+        launchApp(appUi)
+    else
+        appUi = "Waiting on you, now!"
 }
 
 // Check blockchain status and update dialog appropriately if it's connected. Returns true if blockchain is connected
 function blockchainStatusChanged() {
     // On first time startup, only process the connection if we're currently waiting for the connection
-    if (firstTimeStartup && currentDialog !== dialog.tryingUrl && currentDialog !== dialog.timeoutUrl)
+    if (firstTimeStartup && currentDialog !== dialog.tryingUrl && currentDialog !== dialog.timeoutUrl
+            && currentDialog !== dialog.deploymentServerSuccess)
         return false
 
     // How many milliseconds counts as a high latency connection?
@@ -247,12 +366,12 @@ function blockchainStatusChanged() {
     return false
 }
 
-function tryServer() {
+function tryServer(url) {
     let urlInput = Qt.resolvedUrl(currentDialog.input.text)
     console.info("User gave node URL:", urlInput)
     if (!urlInput.toString()) {
         if (!dialog.badUrl.input)
-            // Just use the same input method for badUrl ass for getUrl
+            // Just use the same input method for badUrl as for getUrl
             dialog.badUrl.input = dialog.getUrl.input
 
         displayDialog("badUrl")
@@ -266,6 +385,183 @@ function tryServer() {
         timeoutCanceler()
     timeoutCanceler = Utils.setTimeout(10000, blockchainNodeTimeout)
 }
+
+/**
+ * BEGINNING OF: Invite code functionality
+ */
+// Hexadecimal mask of HHH-HHHHHHHHHH
+function isValidInviteCode(inviteCode) {
+    let codeLength = inviteCode.length
+    // Check length
+    if (codeLength !== 14) return false
+
+    // Check each character
+    let acceptableChars = "ABCDEFabcdef1234567890" // For hexadecimal mask of HHH-HHHHHHHHHH
+    for (var i = 0; i < codeLength; ++i) {
+        var char = inviteCode[i]
+        if (i === 3) {
+            if (char !== "-") return false
+        } else {
+            var searchIndex = acceptableChars.search(char)
+            if (searchIndex === -1) return false
+        }
+    }
+    return true
+}
+
+function tryInviteCode() {
+    let inviteCode = currentDialog.input.text
+    console.info("User gave invite code:", inviteCode)
+    if (!isValidInviteCode(inviteCode)) {
+        if (!dialog.inviteCodeMalformed.input)
+            // Just use the same input method for inviteCodeMalformed as for inviteCodeGet
+            dialog.inviteCodeMalformed.input = dialog.inviteCodeGet.input
+
+        displayDialog("inviteCodeMalformed")
+        return
+    }
+
+    connectToDispatchServer(inviteCode)
+}
+
+function dispatchServerOnResponse() {
+    /* Intelligently use the following dialogs
+    displayDialog("dispatchServerConnectionFailure")
+    displayDialog("dispatchServerUnrecognizedInviteCode")
+    displayDialog("dispatchServerReportsUnresponsiveDeploymentServer")
+    displayDialog("deploymentServerTrying") // Success
+    */
+
+    if (typeof dispatchServerOnResponse.linesProcessed == 'undefined')
+        dispatchServerOnResponse.linesProcessed = 0
+
+    let lineIn = tlsSession.readLine().trim()
+    console.log("Line in from dispatcher: ", lineIn)
+    if (dispatchServerOnResponse.linesProcessed === 0 && lineIn.indexOf(':') !== -1) {
+        console.log("Must be deployment location")
+        settings.deploymentLocation = lineIn
+        dispatchServerOnResponse.linesProcessed = 1
+    } else if (dispatchServerOnResponse.linesProcessed === 1 && keyManager.isPublicKey(lineIn)) {
+        console.log("Seems to be a public key")
+        settings.deploymentKey = lineIn
+        dispatchServerOnResponse.linesProcessed = 2
+
+        connectToDeploymentServer()
+        // Disconnect from further calls
+        return true
+    }
+}
+
+function dispatchServerTimeout() {
+    /* Intelligently use the following dialogs
+    displayDialog("dispatchServerTimeout")
+    */
+}
+
+function deploymentServerOnResponse() {
+    /* Intelligently use the following dialogs
+    displayDialog("deploymentServerConnectionFailure")
+    displayDialog("deploymentServerUnrecognizedInviteCode")
+    displayDialog("deploymentServerInvalidPublicKey")
+    displayDialog("deploymentServerSuccess")
+    */
+
+    if (typeof deploymentServerOnResponse.linesProcessed == 'undefined')
+        deploymentServerOnResponse.linesProcessed = 0
+
+    let lineIn = tlsSession.readLine().trim()
+    console.log("Line from deployment server", lineIn)
+
+    if (deploymentServerOnResponse.linesProcessed === 0 && !!lineIn.match(/^[a-z0-9]{12}$/)) {
+        console.log("It's our voter name!")
+        settings.voterName = lineIn
+        deploymentServerOnResponse.linesProcessed = 1
+    } else if (deploymentServerOnResponse.linesProcessed === 1 && lineIn.indexOf(':') !== -1) {
+        console.log("It's the blockchain URL!")
+        settings.blockchainNodeUrl = lineIn
+        deploymentServerOnResponse.linesProcessed = 2
+
+        displayDialog("deploymentServerSuccess")
+        Utils.connectUntil(blockchain.syncStatusChanged, blockchainStatusChanged)
+        blockchain.nodeUrl = lineIn
+    }
+}
+
+function deploymentServerTimeout() {
+    /* Intelligently use the following dialogs
+    displayDialog("deploymentServerTimeout")
+    */
+}
+
+/**
+ * The dispatch server (dispatcher)
+ * - determines which deployment server the invite code corresponds to
+ * - contacts the deployment server to validate the invite code
+ *    - if valid, the dispatcher returns the deployment server URL and TLS public key to the client
+ */
+function connectToDispatchServer(inviteCode) {
+    /* Sample hooks
+    displayDialog("dispatchServerTrying")
+    Utils.connectUntil(dispatchServer.responseReceived, dispatchServerOnResponse)
+    if (typeof timeoutCanceler === "function")
+        timeoutCanceler()
+    timeoutCanceler = Utils.setTimeout(10000, dispatchServerTimeout)
+    */
+    displayDialog("dispatchServerTrying")
+
+    if (!settings.voterPublicKey)
+        settings.voterPublicKey = keyManager.createNewKey()
+
+    let ephemeralKey = keyManager.createNewKey()
+    let voterKey = settings.voterPublicKey
+
+    console.log("Connecting to dispatcher with my key: ", ephemeralKey)
+    tlsSession.connectToServer("[::]:33388", "5DY2ktBXfoCHY3zy7gMCrTkR2TF9UkFjb3cW4Spo7WzwKMpdfs", ephemeralKey)
+    tlsSession.sendMessage(inviteCode + "\n" + voterKey + "\n")
+
+    Utils.connectUntil(tlsSession.lineReady, dispatchServerOnResponse)
+    Utils.connectOnce(tlsSession.handshakeCompleted, function() {
+        settings.inviteCode = inviteCode
+    })
+    Utils.connectOnce(tlsSession.sessionEnded, function() {
+        if (!!settings.deploymentLocation)
+            return
+        console.log("Connection to dispatch server ended without good response")
+        if (currentDialog === dialog.dispatchServerTrying)
+            displayDialog("dispatchServerUnrecognizedInviteCode")
+    })
+}
+
+/**
+ * The deployment server configures an account on the blockchain that is associated with a public key
+ * that is derived from a private key known only to the client/user's app.
+ *
+ * The deployment server returns to the client the account name configured with the user's public key.
+ */
+function connectToDeploymentServer() {
+    /* Sample hooks
+    displayDialog("deploymentServerTrying")
+    Utils.connectUntil(deploymentServer.responseReceived, deploymentServerOnResponse)
+    if (typeof timeoutCanceler === "function")
+        timeoutCanceler()
+    timeoutCanceler = Utils.setTimeout(10000, deploymentServerTimeout)
+    */
+
+    displayDialog("deploymentServerTrying")
+
+    let ephemeralKey = keyManager.createNewKey()
+    let voterKey = settings.voterPublicKey
+    let inviteCode = settings.inviteCode
+    console.log("Connecting to deployment with my key: ", ephemeralKey)
+    tlsSession.closeConnection()
+    tlsSession.connectToServer(settings.deploymentLocation, settings.deploymentKey, ephemeralKey)
+    tlsSession.sendMessage(inviteCode + "\n" + voterKey + "\n")
+    Utils.connectUntil(tlsSession.lineReady, deploymentServerOnResponse)
+}
+
+/**
+ * END OF: Invite code functionality
+ */
 
 function processBlockchainNodeError(errorCode) {
     let prelude
@@ -367,7 +663,7 @@ function loadBlockhainInterface() {
     let loaded = (blockchain) => {
         if (!blockchain) {
             console.error("Failed to create BlockchainInterface! Application will not run successfully")
-            displayDialog("blockchainLoadFailed")
+            displayDialog("startupFailed")
             assistantLogo.rotationRpms = 0
             return
         }
@@ -438,6 +734,7 @@ function startup(Screen) {
         Utils.connectOnce(window.ready, () => {
                               console.info(`Startup Window Created`)
                               createdObjects.startupWindow = window
+                              dialogWindow = window
                               dialogArea = window.dialogArea
                               dialogArea.returnPressed.connect(progressDialog)
                               dialogArea.spacePressed.connect(progressDialog)
@@ -478,4 +775,9 @@ var serverInputFieldSource =
         "import QtQuick.Controls 2.15\n\n" +
         "TextField {\n" +
         "    inputMethodHints: Qt.ImhPreferLowercase | Qt.ImhUrlCharactersOnly" +
+        "}"
+
+var inviteCodeFieldSource =
+        "import QtQuick.Controls 2.15\n\n" +
+        "TextField {\n" +
         "}"

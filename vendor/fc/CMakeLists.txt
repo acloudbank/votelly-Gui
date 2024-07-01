@@ -1,5 +1,5 @@
 project( fc )
-cmake_minimum_required( VERSION 3.8 )
+cmake_minimum_required( VERSION 3.5 )
 
 SET( DEFAULT_HEADER_INSTALL_DIR usr/include/${target} )
 SET( DEFAULT_LIBRARY_INSTALL_DIR usr/lib )

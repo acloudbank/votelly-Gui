@@ -20,5 +20,6 @@
         <file>qml/AppManager.qml</file>
         <file>qml/AssistantSeat.qml</file>
         <file>qml/AppManager.Startup.js</file>
+        <file>qml/AsiText.qml</file>
     </qresource>
 </RCC>

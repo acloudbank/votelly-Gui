@@ -4,6 +4,9 @@ import QtQuick.Window 2.14
 import "JsUtils.js" as Utils
 
 Item {
+    // The implicit height of the control will dynamically adjust as a function of the textual content
+    implicitHeight: dialogText.height + dialogFooterArea.height
+
     property alias animateTyping: typingAnimation.enabled
     property alias text: typingAnimation.text
     property alias font: dialogText.font
@@ -50,43 +53,63 @@ Item {
         }
     }
 
+    // White, semi-transparent background for the dialog text and footer
     Rectangle {
         id: assistantDialogRectangle
         radius: 5
         opacity: .7
+        /* Fill the parent
+         * As the parent's height is dynamically calculated with the height of the dialog text,
+         * the background's height will also dynamically adjust.
+         */
         anchors.fill: parent
     }
-    Item {
-        id: assistantDialogArea
-        anchors.fill: assistantDialogRectangle
-        anchors.margins: 10
 
-        Text {
+
+    // Foreground
+    Item {
+        id: internalForeground
+         anchors {
+             // Fill the parent's width
+             left: parent.left
+             right: parent.right
+             margins: 10
+             // The implicit height is derived from the the implicit height of the dialog text
+             // plus the explicit height of the footer area
+         }
+
+        AsiText {
             id: dialogText
-            anchors.fill: parent
-            anchors.bottomMargin: dialogFooterArea.height > 0? dialogFooterArea.height + 10 : 0
-            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-            font.pointSize: 18
+            anchors {
+                // Anchor the top, left, and right
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                // Do not anchor the bottom to permit the implicit height to vary
+                margins: 5 // Add some buffer between the text and the edges
+            }
+            font.pointSize: 16
         }
+
         Item {
             id: dialogFooterArea
             anchors {
-                left: assistantDialogArea.left
-                right: assistantDialogArea.right
-                bottom: assistantDialogArea.bottom
+                left: internalForeground.left
+                right: internalForeground.right
+                top: dialogText.bottom
             }
-            height: 80
+            // Define a fixed height that is proportional to the width
+            height: width / 6
 
             Image {
                 id: previousButton
                 source: "image://assistant/vee"
                 rotation: 90
                 anchors {
-                    left: dialogFooterArea.left
-                    top: dialogFooterArea.top
-                    bottom: dialogFooterArea.bottom
-                    margins: 5
+                    verticalCenter: parent.verticalCenter
+                    left: parent.left
                 }
+                height: parent.height
                 width: height
 
                 MouseArea {
@@ -98,23 +121,21 @@ Item {
             Item {
                 id: inputAreaItem
                 anchors {
-                    horizontalCenter: dialogFooterArea.horizontalCenter
-                    top: dialogFooterArea.top
-                    bottom: dialogFooterArea.bottom
-                    margins: 5
+                    top: parent.top
+                    bottom: parent.bottom
+                    left: previousButton.right
+                    right: nextButton.left
                 }
-                width: dialogFooterArea.width - dialogFooterArea.height*2.5
             }
             Image {
                 id: nextButton
                 source: "image://assistant/vee"
                 rotation: -90
                 anchors {
-                    top: dialogFooterArea.top
-                    bottom: dialogFooterArea.bottom
-                    right: dialogFooterArea.right
-                    margins: 5
+                    verticalCenter: parent.verticalCenter
+                    right: parent.right
                 }
+                height: parent.height
                 width: height
 
                 MouseArea {

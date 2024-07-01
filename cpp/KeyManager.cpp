@@ -2,6 +2,7 @@
 #include <Action.hpp>
 
 #include <QJsonDocument>
+#include <QSettings>
 
 // In this file alone, we can use FC to do our crypto and serializations
 #include <fc/crypto/elliptic.hpp>
@@ -16,8 +17,6 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/filter/zlib.hpp>
-
-KeyManager::KeyManager(QObject *parent) : QObject(parent) {}
 
 // Types from EOSIO, to serialize and sign
 // EOSIO code used under MIT license:
@@ -86,7 +85,7 @@ static constexpr uint64_t char_to_symbol(char c) {
     return 0;
 }
 
-static constexpr uint64_t string_to_uint64_t(std::string_view str) {
+static constexpr uint64_t string_to_uint64_t(const char str[]) {
     uint64_t n = 0;
     int i = 0;
     for ( ; str[i] && i < 12; ++i) {
@@ -111,17 +110,17 @@ private:
     friend struct fc::reflector<name>;
     friend void fc::from_variant(const fc::variant& v, name& check);
 
-    void set(std::string_view str) {
+    void set(std::string str) {
         const auto len = str.size();
         if (len > 13) {
             qCritical("Asked to set name from string, but string is too long!");
             return;
         }
-        value = string_to_uint64_t(str);
+        value = string_to_uint64_t(str.c_str());
     }
 
 public:
-    explicit name(std::string_view str) { set(str); }
+    explicit name(std::string str) { set(str); }
     constexpr name() = default;
 
     std::string to_string()const {
@@ -495,6 +494,8 @@ void packed_transaction::local_pack_context_free_data()
 }
 // End EOSIO import code
 
+KeyManager::KeyManager(QObject *parent) : QObject(parent) {}
+
 SignableTransaction* KeyManager::prepareForSigning(MutableTransaction* transaction) {
     if (transaction == nullptr) {
         qDebug() << "Asked to prepare transaction for signing, but transaction is nullptr!";
@@ -525,20 +526,27 @@ SignableTransaction* KeyManager::prepareForSigning(MutableTransaction* transacti
 }
 
 void KeyManager::signTransaction(SignableTransaction* transaction) {
+    // TODO: make this for real (actual key management, checking permissions on chain, checking transaction auths...)
+    auto key = QString("5KXAfKzbKoBAPCAMbHN4gkwCu3EeidTMvxrVBFqebjs3MmEwxzk"); // Key for followmyvote on private testnet
+
+    signTransaction(transaction, key);
+}
+
+void KeyManager::signTransaction(SignableTransaction *transaction, QString privateKey) {
     if (transaction == nullptr) {
         qDebug() << "Asked to sign transaction, but transaction is nullptr!";
         return;
     }
 
+    fc::crypto::private_key fcKey(privateKey.toStdString());
+
     // Bump the expiration just before signing, as we want short expirations
     transaction->setExpiration(QDateTime::currentDateTimeUtc().addSecs(10));
 
-    // TODO: make this for real (actual key management, checking permissions on chain, checking transaction auths...)
-    auto key = private_key_type(string("5Kcko94XiN24kSTE9zSmTK24yS8bUQPGTRgtLJtRUetEMuYPvap"));
     auto trxJson = QJsonDocument(transaction->json());
     auto trx = fc::json::from_string(trxJson.toJson().toStdString()).as<signed_transaction>();
 
-    auto sig = trx.sign(key, chain_id_type(fc::sha256(blockchain()->chainId().toStdString())));
+    auto sig = trx.sign(fcKey, chain_id_type(fc::sha256(blockchain()->chainId().toStdString())));
     transaction->addSignature(QString::fromStdString(sig.to_string()));
 }
 
@@ -553,6 +561,48 @@ BroadcastableTransaction* KeyManager::prepareForBroadcast(SignableTransaction* t
     auto id = QByteArray::fromStdString(t.id().str());
     auto json = QByteArray::fromStdString(fc::json::to_string(ptrx, fc::time_point::now() + fc::milliseconds(1)));
     return new BroadcastableTransaction(m_blockchain, id, QJsonDocument::fromJson(json).object());
+}
+
+QString KeyManager::createNewKey() {
+    QSettings wallet;
+    auto key = fc::ecc::private_key::generate();
+    auto publicKey = QString::fromStdString(key.get_public_key().to_base58());
+    auto secret = key.get_secret();
+    wallet.beginGroup("wallet");
+    wallet.beginWriteArray("keys");
+    wallet.setValue(publicKey, QByteArray(secret.data(), secret.data_size()));
+    wallet.sync();
+    return publicKey;
+}
+
+bool KeyManager::hasPrivateKey(QString publicKey) {
+    QSettings wallet;
+    return wallet.contains("wallet/keys/" + publicKey);
+}
+
+QByteArray KeyManager::getSharedSecret(QString foreignKey, QString myKey) {
+    if (!hasPrivateKey(myKey)) {
+        qWarning() << "Cannot get shared secret: private key not found in wallet";
+        return {};
+    }
+    auto privateKeySecret = QSettings().value("wallet/keys/" + myKey).toByteArray();
+    try {
+        auto key = fc::ecc::private_key::regenerate(fc::sha256(privateKeySecret.data(), privateKeySecret.size()));
+        auto publicKey = fc::ecc::public_key::from_base58(foreignKey.toStdString());
+        auto secret = key.get_shared_secret(publicKey);
+        return QByteArray(secret.data(), secret.data_size());
+    } catch (fc::exception& e) {
+        qWarning() << "Failed to get shared secret" << QString::fromStdString(e.to_detail_string());
+    }
+}
+
+bool KeyManager::isPublicKey(QString maybeKey) {
+    try {
+        fc::ecc::public_key::from_base58(maybeKey.toStdString());
+        return true;
+    } catch (fc::exception&) {
+        return false;
+    }
 }
 
 void decodeAction(QByteArray json, Action* action) {

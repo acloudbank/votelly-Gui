@@ -77,7 +77,11 @@ Window {
 
     KeyManager {
         id: keyManager
-        blockchain: context? context.blockchain : null
+        Component.onCompleted: {
+            if (context) {
+                setBlockchain(context.blockchain)
+            }
+        }
     }
     Settings {
         id: settings
