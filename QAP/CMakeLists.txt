@@ -44,16 +44,11 @@ endif()
 include_directories("vendor")
 
 # Define the Qappa library
-set(QAPPA_SOURCES
-    Qappa/Qappa.qrc
-    Qappa/Plugin.cpp
-    Qappa/Plugin.hpp
-    Qappa/ComponentManager.cpp
-    Qappa/ComponentManager.hpp
-    Qappa/UXManager.cpp
-    Qappa/UXManager.hpp)
-add_library(Qappa SHARED ${QAPPA_SOURCES})
-target_link_libraries(Qappa PUBLIC Qt6::Core Qt6::Quick)
+
+find_package(Qt6 REQUIRED COMPONENTS Qml)
+qt_standard_project_setup(REQUIRES 6.7)
+add_subdirectory("Qappa")
+
 
 include_directories(cpp)
 set(POLLARIS_SOURCES
@@ -109,3 +104,4 @@ target_compile_definitions(PollarisGui
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG> QT_MESSAGELOGCONTEXT)
 target_link_libraries(PollarisGui
   PRIVATE Qappa KeyManager Qt6::Core Qt6::Quick)
+

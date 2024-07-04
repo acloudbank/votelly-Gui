@@ -1,4 +1,4 @@
-#include <Qappa/ComponentManager.hpp>
+#include "ComponentManager.hpp"
 
 #include <QDebug>
 #include <QQmlIncubator>

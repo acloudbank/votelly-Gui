@@ -11,8 +11,6 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-#set_property(SOURCE Qappaplugin_QappaPlugin.moc PROPERTY SKIP_AUTOGEN ON)
-
 qt6_add_qml_module(Qappa
     URI Qappa
     VERSION 1.0

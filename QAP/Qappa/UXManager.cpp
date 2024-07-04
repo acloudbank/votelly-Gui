@@ -1,4 +1,4 @@
-#include <Qappa/UXManager.hpp>
+#include "UXManager.hpp"
 
 #include <QFile>
 
