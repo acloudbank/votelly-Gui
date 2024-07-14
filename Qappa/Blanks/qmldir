@@ -1,3 +1,0 @@
-module Qappa.Blanks
-depends Qappa 1.0
-HorizontalTwoPanel 1.0 HorizontalTwoPanel.qml
