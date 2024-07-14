@@ -1,10 +1,9 @@
-import Qappa 1.0
-
 import QtQuick 2.15
 import QtQuick.Window 2.15
 
 import Qt.labs.settings 1.1
 
+import Qappa 1.0
 import Pollaris.Utilities 1.0
 import "JsUtils.js" as Utils
 import "AppManager.Startup.js" as Startup
@@ -49,6 +48,7 @@ Assistant {
         color: "transparent"
         visible: true
     }
+
     property Settings settings: Settings {
         id: assistantSettings
         // category: "Assistant"

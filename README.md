@@ -1,5 +1,10 @@
-# Pollaris GUI
-This repository contains the graphical user interface (GUI) front-end of Pollaris, Follow My Vote's blockchain-based polling system.
+# Votelly GUI
+# Real Time Voting
+
+![image](https://homepesa.com/images/2023-03-acloudbank-1536x705_.jpeg)
+
+This repository contains the graphical user interface (GUI) front-end of Votelly-, blockchain-based polling system.
+
 
 ## Requirements
 

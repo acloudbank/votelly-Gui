@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
     app.setOrganizationDomain(QStringLiteral("https://followmyvote.com"));
 
     QQmlApplicationEngine engine;
-    // Add the QRC to the import paths so that Qappa can be imported // engine.addImportPath(QStringLiteral("qrc:/import/qappa/"));
-   engine.addImportPath( "qrc:///qappa" );
+    // Add the QRC to the import paths so that Qappa can be imported
+    engine.addImportPath(":/");
 
     qmlRegisterUncreatableType<Pollaris>(POLLARIS_1_0, "Pollaris",
                  QStringLiteral("Pollaris is an enumeration container and cannot be instantiated directly in QML"));
